@@ -1,0 +1,39 @@
+name: Deploy database to the development stand
+on: workflow_dispatch
+permissions: {}
+env:
+  ENV_FILENAME: .env
+  COMPOSE_FILENAME: compose.yml
+jobs:
+  deploy_database:
+    environment: develop
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Create .env file
+        run: |
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" > ${{ env.ENV_FILENAME }}
+          echo "PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }}" >> ${{ env.ENV_FILENAME }}
+          echo "PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }}" >> ${{ env.ENV_FILENAME }}
+      - name: Copy files via ssh password
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "${{ env.ENV_FILENAME }},${{ env.COMPOSE_FILENAME }}"
+          target: ${{ vars.PROJECT_DIR }}
+      - name: Compose up
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ${{ vars.PROJECT_DIR }}
+            docker compose --env-file ${{ env.ENV_FILENAME }} up -d

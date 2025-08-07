@@ -1,0 +1,54 @@
+services:
+  database:
+    image: postgres:17.4-alpine
+    container_name: database
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      TZ: Europe/Moscow
+    env_file:
+      - .env
+    volumes:
+      - database_vol:/var/lib/postgresql/data
+    networks:
+      - database_net
+    healthcheck:
+      test: pg_isready -U postgres
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  db-client:
+    image: dpage/pgadmin4:9.2
+    container_name: db-client
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Moscow
+    env_file:
+      - .env
+    volumes:
+      - db-client_vol:/var/lib/pgadmin
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - database_net
+      - nginx_net
+
+networks:
+  database_net:
+    driver: bridge
+    name: database_net
+  nginx_net:
+    driver: bridge
+    external: true
+    name: nginx_net
+
+volumes:
+  database_vol:
+    driver: local
+    name: database_vol
+  db-client_vol:
+    driver: local
+    name: db-client_vol
