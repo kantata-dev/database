@@ -6,7 +6,7 @@ env:
   COMPOSE_FILENAME: compose.yml
 jobs:
   deploy_database:
-    environment: develop
+    name: Deploy database
     permissions:
       contents: read
     runs-on: ubuntu-22.04
@@ -28,7 +28,7 @@ jobs:
           source: "${{ env.ENV_FILENAME }},${{ env.COMPOSE_FILENAME }}"
           target: ${{ vars.PROJECT_DIR }}
       - name: Compose up
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -36,4 +36,5 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ${{ vars.PROJECT_DIR }}
+            docker compose down || true
             docker compose --env-file ${{ env.ENV_FILENAME }} up -d
